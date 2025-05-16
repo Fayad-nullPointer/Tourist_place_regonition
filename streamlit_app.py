@@ -50,7 +50,13 @@ st.write("Upload an image of an Alexandria landmark to identify it and get infor
 
 # Sidebar with example images
 st.sidebar.title("Sample Images")
-example_images = os.listdir("uploads")[:5]  # Get first 5 images from uploads folder
+# Use absolute path to access uploads folder
+uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+try:
+    example_images = os.listdir(uploads_dir)[:5]  # Get first 5 images from uploads folder
+except Exception as e:
+    st.sidebar.warning(f"Could not load example images: {e}")
+    example_images = []
 selected_example = st.sidebar.selectbox("Select an example image", ["None"] + example_images)
 
 # Main content area - split into two columns
@@ -59,10 +65,9 @@ col1, col2 = st.columns([1, 1])
 with col1:
     # File uploader
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-    
-    # Option to use example image
+      # Option to use example image
     if selected_example != "None":
-        uploaded_file = "uploads/" + selected_example
+        uploaded_file = os.path.join(uploads_dir, selected_example)
         st.write(f"Using example image: {selected_example}")
 
     # Display image and predict
