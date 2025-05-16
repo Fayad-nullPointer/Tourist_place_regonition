@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 import os
-import shutil
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from PIL import Image
@@ -11,7 +10,7 @@ import io
 st.set_page_config(
     page_title="Alexandria Landmarks Classifier",
     page_icon="🏛️",
-    layout="wide"
+    layout="centered"
 )
 
 # Load the model
@@ -48,79 +47,64 @@ def predict_image(img_array):
 st.title("Alexandria Landmarks Classifier")
 st.write("Upload an image of an Alexandria landmark to identify it and get information.")
 
-# Sidebar with example images
-st.sidebar.title("Sample Images")
-# Use absolute path to access uploads folder
-uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
-try:
-    example_images = os.listdir(uploads_dir)[:5]  # Get first 5 images from uploads folder
-except Exception as e:
-    st.sidebar.warning(f"Could not load example images: {e}")
-    example_images = []
-selected_example = st.sidebar.selectbox("Select an example image", ["None"] + example_images)
+# Image upload options
+st.subheader("Upload Image")
+upload_option = st.radio(
+    "Choose upload method:",
+    ["Upload from Device", "Take Photo with Camera"]
+)
 
-# Main content area - split into two columns
-col1, col2 = st.columns([1, 1])
-
-with col1:
-    # File uploader
+if upload_option == "Upload from Device":
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-      # Option to use example image
-    if selected_example != "None":
-        uploaded_file = os.path.join(uploads_dir, selected_example)
-        st.write(f"Using example image: {selected_example}")
+else:  # Camera option
+    uploaded_file = st.camera_input("Take a photo of a landmark")
 
-    # Display image and predict
-    if uploaded_file is not None:
-        try:
-            # Handle both file objects and file paths
-            if isinstance(uploaded_file, str):
-                img = Image.open(uploaded_file)
-                img_array = image.img_to_array(image.load_img(uploaded_file, target_size=img_size))
-            else:
-                img = Image.open(uploaded_file)
-                img_array = image.img_to_array(image.load_img(io.BytesIO(uploaded_file.getvalue()), target_size=img_size))
-            
-            st.image(img, caption='Uploaded Image', use_column_width=True)
-            
-            # Add a spinner during prediction
-            with st.spinner('Analyzing image...'):
-                # Make prediction
-                predicted_class, confidence = predict_image(img_array)
-            
-            # Show prediction results
-            st.success(f"Prediction: {predicted_class}")
-            st.progress(confidence)
-            st.write(f"Confidence: {confidence:.2%}")
+# Process and predict
+if uploaded_file is not None:
+    try:
+        # Process the uploaded image
+        img = Image.open(uploaded_file)
+        img_array = image.img_to_array(image.load_img(io.BytesIO(uploaded_file.getvalue()), target_size=img_size))
         
-        except Exception as e:
-            st.error(f"Error processing image: {e}")
+        # Add a spinner during prediction
+        with st.spinner('Analyzing landmark...'):
+            # Make prediction
+            predicted_class, confidence = predict_image(img_array)
+        
+        # Show prediction results
+        st.success(f"Prediction: {predicted_class}")
+        st.progress(confidence)
+        st.write(f"Confidence: {confidence:.2%}")
+        
+        # Display the image after prediction
+        st.subheader("Uploaded Image")
+        st.image(img, caption=f'Identified as: {predicted_class}', use_column_width=True)
+        
+        # Display information about the landmark
+        st.subheader(f"About {predicted_class}")
+        st.write(descriptions.get(predicted_class, "No information available for this landmark."))
+        
+        # Additional information section
+        st.subheader("Visitor Information")
+        if predicted_class == 'Alexandria Library':
+            st.write("📍 **Location**: El Shatby, Alexandria")
+            st.write("⏰ **Opening Hours**: 10:00 AM - 7:00 PM")
+            st.write("💰 **Entry Fee**: 70 EGP")
+        elif predicted_class == 'Qauitbay citadel':
+            st.write("📍 **Location**: Eastern Harbor, Alexandria")
+            st.write("⏰ **Opening Hours**: 9:00 AM - 5:00 PM")
+            st.write("💰 **Entry Fee**: 80 EGP")
+        elif predicted_class == 'almorsy abo alabas':
+            st.write("📍 **Location**: Anfoushi, Alexandria")
+            st.write("⏰ **Opening Hours**: Open for prayers")
+            st.write("💰 **Entry Fee**: Free")
+    
+    except Exception as e:
+        st.error(f"Error processing image: {e}")
 
-with col2:
-    # Display prediction info
-    if uploaded_file is not None:
-        try:
-            st.subheader(f"About {predicted_class}")
-            st.write(descriptions.get(predicted_class, "No information available for this landmark."))
-            
-            # Additional information section
-            st.subheader("Visitor Information")
-            if predicted_class == 'Alexandria Library':
-                st.write("📍 **Location**: El Shatby, Alexandria")
-                st.write("⏰ **Opening Hours**: 10:00 AM - 7:00 PM")
-                st.write("💰 **Entry Fee**: 70 EGP")
-            elif predicted_class == 'Qauitbay citadel':
-                st.write("📍 **Location**: Eastern Harbor, Alexandria")
-                st.write("⏰ **Opening Hours**: 9:00 AM - 5:00 PM")
-                st.write("💰 **Entry Fee**: 80 EGP")
-            elif predicted_class == 'almorsy abo alabas':
-                st.write("📍 **Location**: Anfoushi, Alexandria")
-                st.write("⏰ **Opening Hours**: Open for prayers")
-                st.write("💰 **Entry Fee**: Free")
-        except:
-            st.write("Upload or select an image to see information about the landmark.")
-    else:
-        st.write("Upload or select an image to see information about the landmark.")
+# Footer
+st.markdown("---")
+st.write("Alexandria Landmarks Classifier - Computer Vision Project")
 
 # Footer
 st.markdown("---")
